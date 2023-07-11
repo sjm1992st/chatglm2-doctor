@@ -387,6 +387,13 @@ def main():
 
     if training_args.do_predict:
         logger.info("*** Predict ***")
+        # 读取原test file
+        list_test_samples = []
+        with open(data_args.test_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = json.loads(line)
+                list_test_samples.append(line)
+
         predict_results = trainer.predict(predict_dataset, metric_key_prefix="predict", max_length=max_seq_length,
                                           do_sample=True, top_p=0.7, temperature=0.95)
         metrics = predict_results.metrics
@@ -408,10 +415,12 @@ def main():
                     predict_results.label_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
                 )
                 labels = [label.strip() for label in labels]
-                output_prediction_file = os.path.join(training_args.output_dir, "generated_predictions.txt")
+                output_prediction_file = os.path.join(training_args.output_dir, "generated_predictions.json")
                 with open(output_prediction_file, "w", encoding="utf-8") as writer:
-                    for p, l in zip(predictions, labels):
-                        res = json.dumps({"labels": l, "predict": p}, ensure_ascii=False)
+                    for idx, (p, l) in enumerate(zip(predictions, labels)):
+                        samp = list_test_samples[idx]
+                        samp["target"] = p
+                        res = json.dumps(samp, ensure_ascii=False)
                         writer.write(f"{res}\n")
     return results
 
